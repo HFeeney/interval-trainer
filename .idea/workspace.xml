@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="ac1de58d-25c4-4062-8248-45279294326d" name="Changes" comment="">
+    <list default="true" id="ac1de58d-25c4-4062-8248-45279294326d" name="Changes" comment="First commit">
       <change afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
       <change afterPath="$PROJECT_DIR$/.idea/libraries/core.xml" afterDir="false" />
       <change afterPath="$PROJECT_DIR$/.idea/libraries/javamp3_1_0_4.xml" afterDir="false" />
@@ -60,6 +60,18 @@
       <option name="presentableId" value="Default" />
       <updated>1689695677495</updated>
     </task>
+    <task id="LOCAL-00001" summary="First commit">
+      <created>1689780411986</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1689780411986</updated>
+    </task>
+    <option name="localTasksCounter" value="2" />
     <servers />
+  </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="First commit" />
+    <option name="LAST_COMMIT_MESSAGE" value="First commit" />
   </component>
 </project>
