@@ -10,7 +10,7 @@ public class Main extends PApplet {
     float[] spectrum = new float[BANDS]; // bins for each frequency band recording amplitude
     static final int SAMPLE_RATE = 44100; // standard microphone sample rate in Hz
     static final int MAX_FREQUENCY = SAMPLE_RATE / 2; // most precise frequency detectable is half sample rate
-    static final double RESOLUTION = (double) MAX_FREQUENCY / BANDS; // width of each frequency band in Hz
+    static final float RESOLUTION = (float) MAX_FREQUENCY / BANDS; // width of each frequency band in Hz
 
     static final int HARMONICS = 2; // number of harmonics to consider in product
     float[] hpSpectrum = new float[BANDS]; // to store product of harmonics of each frequency band
@@ -19,6 +19,7 @@ public class Main extends PApplet {
     static final int HPS_START_BIN = (int)(LOW_FREQ_NOISE_CUTOFF / RESOLUTION);
     static final int HPS_END_BIN = (int)(HIGH_FREQ_NOISE_CUTOFF / RESOLUTION);
     static final float MIN_VOLUME = 0.01f; // lowest volume for which pitch will be reported
+    static final String[] pitches = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
 
     public void settings() {
         size(1800, 360);
@@ -75,11 +76,26 @@ public class Main extends PApplet {
                 }
             }
 
-            System.out.println(maxBucket * RESOLUTION);
+            System.out.println(getPitch(maxBucket * RESOLUTION));
             stroke(100, 255, 250);
             line(maxBucket, height, maxBucket, 0);
         }
     }
+
+    public static String getPitch(float freq) {
+        // determine the number of semitones offset from C4 the offset is, using fundamental freq A4 = 440 Hz
+        int offset = (int) Math.round(12 * Math.log(freq / 440) / Math.log(2)) + 9;
+        // determine the octave number (offset in range [0, 11] is octave 4)
+        int octave = offset / 12 + 4;
+        int normalizedOffset = offset % 12;
+        if (normalizedOffset < 0) {
+            normalizedOffset += 12;
+            octave--;
+        }
+        String pitch = pitches[normalizedOffset];
+        return pitch + "" + octave;
+    }
+
     public static void main(String[] args) {
         PApplet.main("Main");
     }
