@@ -13,6 +13,7 @@ public class Main extends PApplet {
     AudioIn in; // audio input source
     Amplitude volume;
     SinOsc sound;
+    BeatDetector beatDetector;
 
 
 
@@ -28,7 +29,7 @@ public class Main extends PApplet {
     static final float HIGH_FREQ_NOISE_CUTOFF = 1200f; // above this value, frequencies considered noise
     static final int HPS_START_BIN = (int)(LOW_FREQ_NOISE_CUTOFF / RESOLUTION);
     static final int HPS_END_BIN = (int)(HIGH_FREQ_NOISE_CUTOFF / RESOLUTION);
-    static final float MIN_VOLUME = 0.01f; // lowest volume for which pitch will be reported
+    static final float MIN_VOLUME = 0.05f; // lowest volume for which pitch will be reported
 
 
 
@@ -57,16 +58,23 @@ public class Main extends PApplet {
         PLAY_2,
         LISTEN_1,
         LISTEN_2,
+        LISTEN_3,
+        LISTEN_4,
+        CHECK,
         PAUSE
     }
     private boolean stateChange = true;
     private STATE state = STATE.PLAY_1;
+    private final Map<String, Integer> pitchCounts = new HashMap<>();
+    private int samplesTaken = 0;
+    private String mostFrequent = null;
+    private final boolean[] userPlayedInterval = new boolean[2];
 
 
 
     // program parameters
     private static final int[] INTERVALS = {4, 5, 7, 12, -4, -5, -7, -12}; // intervals that will be tested
-    private static final int NUM_DETECTION_SAMPLES = 100;
+    private static final int NUM_DETECTION_SAMPLES = 50;
     private static final float VOLUME_RAMP_INCREMENT = 0.05f;
     private static final long NOTE_DURATION = 2000;
 
@@ -82,10 +90,12 @@ public class Main extends PApplet {
         in = new AudioIn(this, 0);
         volume = new Amplitude(this);
         sound = new SinOsc(this);
+        beatDetector = new BeatDetector(this);
 
         in.start();
         fft.input(in);
         volume.input(in);
+        beatDetector.input(in);
     }
 
     // program loop
@@ -123,6 +133,9 @@ public class Main extends PApplet {
             stroke(0, 255, 0);
             ellipse(width * 2 / 3.0f, height / 2.0f, 80, 80);
         }
+        fill(0, 0, 255);
+        if (beatDetector.isBeat())
+            rect(0, 0, 50, 50);
     }
 
     void audio() {
@@ -149,6 +162,9 @@ public class Main extends PApplet {
     }
 
     void update() {
+        if (state == STATE.CHECK) {
+            System.out.println(userPlayedInterval[0] + " " + userPlayedInterval[1]);
+        }
         if (stateChange) {
             if (state == STATE.PLAY_1) {
                 audioState = AUDIO_STATE.PLAYING;
@@ -190,26 +206,63 @@ public class Main extends PApplet {
         }
         if (!sound.isPlaying()) {
             if (state == STATE.LISTEN_1) {
-                if (listen(offsetToFrequency(currNoteOffset))) {(
-                    new Timer()).schedule(
-                        new TimerTask() {
-                            @Override
-                            public void run() {
-                                changeState(STATE.LISTEN_2);
-                            }
-                        },
-                        1000
-                    );
-                    changeState(STATE.IDLE);
-                } else {
-                    changeState(STATE.PLAY_1);
+                // wait for first note to play
+                if (beatDetector.isBeat()) {
+                    pitchCounts.clear();
+                    mostFrequent = null;
+                    samplesTaken = 0;
+                    changeState(STATE.LISTEN_2);
                 }
             } else if (state == STATE.LISTEN_2) {
-                if (listen(offsetToFrequency(nextNoteOffset))) {
-                    currNoteOffset = nextNoteOffset;
-                    nextNoteOffset = getNextNoteOffset();
+                if (samplesTaken >= NUM_DETECTION_SAMPLES) {
+                    userPlayedInterval[0] = mostFrequent.equals(getPitch(offsetToFrequency(currNoteOffset)));
+                    changeState(STATE.LISTEN_3);
+                    System.out.println(pitchCounts);
                 }
-                changeState(STATE.PLAY_1);
+
+                System.out.println(samplesTaken);
+                // detected note is the most common pitch in a number of samples
+                String detected = getPitch(detectPitch());
+                if (detected != null) {
+                    samplesTaken++;
+                    if (!pitchCounts.containsKey(detected))
+                        pitchCounts.put(detected, 0);
+                    int newCount = pitchCounts.get(detected) + 1;
+                    pitchCounts.put(detected, newCount);
+
+                    if (mostFrequent == null || pitchCounts.get(mostFrequent) < newCount) {
+                        mostFrequent = detected;
+                    }
+                }
+            } else if (state == STATE.LISTEN_3) {
+                if (beatDetector.isBeat()) {
+                    pitchCounts.clear();
+                    mostFrequent = null;
+                    samplesTaken = 0;
+                    changeState(STATE.LISTEN_4);
+                }
+            } else if (state == STATE.LISTEN_4) {
+                if (samplesTaken >= NUM_DETECTION_SAMPLES) {
+                    System.out.println(mostFrequent);
+                    userPlayedInterval[1] = mostFrequent.equals(getPitch(offsetToFrequency(nextNoteOffset)));
+                    changeState(STATE.CHECK);
+                    System.out.println(pitchCounts);
+
+                }
+
+                // detected note is the most common pitch in a number of samples
+                String detected = getPitch(detectPitch());
+                if (detected != null) {
+                    samplesTaken++;
+                    if (!pitchCounts.containsKey(detected))
+                        pitchCounts.put(detected, 0);
+                    int newCount = pitchCounts.get(detected) + 1;
+                    pitchCounts.put(detected, newCount);
+
+                    if (mostFrequent == null || pitchCounts.get(mostFrequent) < newCount) {
+                        mostFrequent = detected;
+                    }
+                }
             }
         }
     }
